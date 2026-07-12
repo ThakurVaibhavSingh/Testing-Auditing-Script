@@ -1,2 +1,47 @@
-# Testing-Auditing-Script
-Under working
+# Testing-Auditing-Script (AirAttack Suite)
+
+A modular Bash-based wireless & network penetration testing toolkit built for
+authorized security testing on networks I own or have explicit permission to test.
+
+> ⚠️ **For authorized use only.** This tool is intended strictly for testing
+> networks and devices you own, or have explicit written permission to assess.
+> Unauthorized use against networks you don't own or control is illegal.
+
+## Status
+🚧 Under active development — some modules are stable, others are still being
+debugged (see Known Issues below).
+
+## Features
+- **WiFi Auditing** — monitor mode management, target scanning, deauth attacks,
+  handshake capture (PMKID pending)
+- **Bettercap Integration** — network recon, ARP/DNS spoofing, MITM sniffing
+- **Nmap Scanning** — host discovery, port/service scanning, OS detection,
+  security/firewall probing, separate module for external/other-network targets
+- **Offline Cracking** — hash extraction and cracking support for ZIP, RAR, PDF,
+  7Z, CAP (handshakes), KeePass, and Office documents via John the Ripper / hashcat
+- Dynamic wireless interface detection (works with any adapter, not hardcoded)
+- Color-coded, menu-driven CLI interface
+
+## Requirements
+Tested on Kali Linux. Depends on:
+`aircrack-ng`, `bettercap`, `nmap`, `john`, `hashcat`, `figlet`, `xterm`,
+`hcxpcapngtool`, `crunch`, `iw`
+
+Run the script once — it checks for all dependencies on startup and reports
+anything missing.
+
+## Usage
+```bash
+sudo ./suite.sh
+```
+Must be run as root (required for interface management, packet injection, and raw sockets).
+
+## Known Issues / TODO
+- Metasploit menu module not yet implemented
+- PMKID capture module disabled pending hcxdumptool integration
+- hashcat GPU acceleration currently broken on AMD iGPU (RustiCL device type issue) — CPU fallback only for now
+- Wordlist handling inconsistent across cracking modules (hardcoded filenames in some)
+
+## Disclaimer
+This project is for educational and authorized security-testing purposes only.
+I am not responsible for misuse of this tool.
