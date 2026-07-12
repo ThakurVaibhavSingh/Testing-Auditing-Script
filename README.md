@@ -19,7 +19,7 @@ debugged (see Known Issues below).
   security/firewall probing, separate module for external/other-network targets
 - **Offline Cracking** — hash extraction and cracking support for ZIP, RAR, PDF,
   7Z, CAP (handshakes), KeePass, and Office documents via John the Ripper / hashcat
-- Dynamic wireless interface detection (works with any adapter, not hardcoded)
+- Dynamic wireless interface detection
 - Color-coded, menu-driven CLI interface
 
 ## Requirements
