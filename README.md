@@ -7,6 +7,16 @@ authorized security testing on networks I own or have explicit permission to tes
 > networks and devices you own, or have explicit written permission to assess.
 > Unauthorized use against networks you don't own or control is illegal.
 
+## About This Project
+This is a **self-taught, learning-purpose project** built as I teach myself
+Bash scripting, networking, and security tooling on my own — I'm not currently
+enrolled in college. Some parts may not work perfectly yet, but nothing here
+is designed to damage your system in any way.
+
+Any comments, suggestions, or corrections are genuinely welcome — thank you
+for checking it out!
+
+
 ## Status
 🚧 Under active development — some modules are stable, others are still being
 debugged (see Known Issues below).
