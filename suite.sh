@@ -41,10 +41,6 @@ check_deps () {
 # ══════════════════════════════════════════════════════════════════════════════
 # INTERFACE SELECTION LOGIC
 # ══════════════════════════════════════════════════════════════════════════════
-
-# ══════════════════════════════════════════════════════════════════════════════
-# INTERFACE SELECTION LOGIC
-# ══════════════════════════════════════════════════════════════════════════════
 select_interface () {
     # Parse `iw dev` blocks: pair each "Interface X" with its following "type Y"
     mapfile -t WIFI_IFACES < <(
@@ -153,12 +149,6 @@ into () { printf "${BOLD}${MAGENTA} $1${NC}\n";}
 to () { printf "${BOLD}${GREEN} $1${NC}\n";}
 out () { printf "${BOLD}${RED} $1${NC}\n";}
 
-
-SUNET=$(ip route | grep -v default | grep "$INTER" | awk '{print $1}')
-#This grabs the local subnet automatically from the interface — no manual input needed. 
-
-
-
 prin_banner() {
     echo -e "${GREEN}"
     figlet -f slant "MAIN MENU"
@@ -192,6 +182,11 @@ run () {
 		#prin "Loading....."
 		#sleep 1
 		select_interface
+		
+		SUNET=$(ip route | grep -v default | grep "$INTER" | awk '{print $1}')
+		#This grabs the local subnet automatically from the interface — no manual input needed. 
+
+
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
