@@ -9,6 +9,8 @@ authorized security testing on networks I own or have explicit permission to tes
 > ⚠️ **For authorized use only.** This tool is intended strictly for testing
 > networks and devices you own, or have explicit written permission to assess.
 > Unauthorized use against networks you don't own or control is illegal.
+
+
 > ⚠️ **WPA3/PMF note:** Deauth-based attacks (mdk4, aireplay) do not work against
 > WPA3-only networks with Protected Management Frames (PMF) enforced — this is
 > by design per the WPA3 spec, not a script bug. However, testing on a personal
