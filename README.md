@@ -47,7 +47,7 @@ debugged (see Known Issues below).
 ## Requirements
 Tested on Kali Linux. Depends on:
 `aircrack-ng`, `bettercap`, `nmap`, `john`, `hashcat`, `figlet`, `xterm`,
-`hcxpcapngtool`, `crunch`, `iw`
+`hcxpcapngtool`, `crunch`, `iw`, `mdk4`
 
 Run the script once — it checks for all dependencies on startup and reports
 anything missing.
@@ -59,7 +59,7 @@ sudo ./suite.sh
 Must be run as root (required for interface management, packet injection, and raw sockets).
 
 ## Known Issues / TODO
-- Metasploit menu module not yet implemented
+- Metasploit menu module has been implemented with a lot limitaions available(Sorry for that).
 - PMKID capture module disabled pending hcxdumptool integration
 - hashcat GPU acceleration currently broken on AMD iGPU (RustiCL device type issue) — CPU fallback only for now
 - Wordlist handling inconsistent across cracking modules (hardcoded filenames in some)
