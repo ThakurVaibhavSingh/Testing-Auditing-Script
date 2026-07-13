@@ -10,6 +10,8 @@ authorized security testing on networks I own or have explicit permission to tes
 > networks and devices you own, or have explicit written permission to assess.
 > Unauthorized use against networks you don't own or control is illegal.
 
+> ⚠️ Deauth-based attacks (mdk4, aireplay) do not work against WPA3 networks with Protected Management Frames enabled — this is by design per the WPA3 spec, not a script bug.
+>
 ## About This Project
 This is a **self-taught, learning-purpose project** built as I teach myself
 Bash scripting, networking, and security tooling on my own — I'm not currently
