@@ -11,7 +11,8 @@ authorized security testing on networks I own or have explicit permission to tes
 > Unauthorized use against networks you don't own or control is illegal.
 
 > ⚠️ Deauth-based attacks (mdk4, aireplay) do not work against WPA3 networks with Protected Management Frames enabled — this is by design per the WPA3 spec, not a script bug.
->
+> Deauth attacks fail against WPA3-only networks with PMF enforced. However, testing confirmed that switching the AP to WPA2/WPA3-transition mode reintroduces the vulnerability — even for clients already
+> connected via WPA3 — because PMF is not strictly enforced in mixed mode.
 ## About This Project
 This is a **self-taught, learning-purpose project** built as I teach myself
 Bash scripting, networking, and security tooling on my own — I'm not currently
