@@ -302,10 +302,8 @@ wifi_scan () {
     fi
     
     xterm -bg black -fg cyan -title "WiFi Scan" -e "airodump-ng $INTERFACE --write scan --output-format csv & PID=\$!; sleep $sec; kill -TERM \$PID; sleep 2; kill -9 \$PID 2>/dev/null" &
-SCAN_PID=$!
-wait $SCAN_PID
-    SCAN_PID=$!
 
+    SCAN_PID=$!
     wait $SCAN_PID #this make the script for 15 sec
     printf "${GREEN}Scan Finished${NC}\n"
 
