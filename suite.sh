@@ -150,6 +150,9 @@ into () { printf "${BOLD}${MAGENTA} $1${NC}\n";}
 to () { printf "${BOLD}${GREEN} $1${NC}\n";}
 out () { printf "${BOLD}${RED} $1${NC}\n";}
 
+HASHFILE="/home/$(logname)/hash.txt"
+HCFILE="/home/$(logname)/hashcat_hash.txt"
+#hashcat and john hash locations
 ACTIVE_PROC=0
 
 ctrlc_kill () {
@@ -202,7 +205,6 @@ run () {
 		clear
 		#prin "Loading....."
 		#sleep 1
-		select_interface
 		
 		SUNET=$(ip route | grep -v default | grep "$INTER" | awk '{print $1}')
 		#This grabs the local subnet automatically from the interface — no manual input needed. 
@@ -302,7 +304,7 @@ wifi_scan () {
     fi
     
     xterm -bg black -fg cyan -title "WiFi Scan" -e "airodump-ng $INTERFACE --write scan --output-format csv & PID=\$!; sleep $sec; kill -TERM \$PID; sleep 2; kill -9 \$PID 2>/dev/null" &
-
+    
     SCAN_PID=$!
     wait $SCAN_PID #this make the script for 15 sec
     printf "${GREEN}Scan Finished${NC}\n"
@@ -538,6 +540,7 @@ wifi_menu() {
         printf "${ORANGE}1. Switch to Monitor Mode${NC}\n"
         printf "${ORANGE}2. Switch to Managed Mode${NC}\n"
         printf "${ORANGE}3.🔍 Target Scan(Monitor Mode Required) ${NC}\n"
+        info "For The IP Of The Target Use Scan Bettercap"
 
         printf "${DIM}══════════════════════════════════════════════════════${NC}\n"
         printf "${RED}${BOLD}               ATTACK             ${NC}\n"
@@ -613,15 +616,19 @@ scan () {
 }
 
 better_menu () {
-    read -rp "$(info "Enter Network IP or press [ENTER] for $SUNET:.... ")" input
+    local gw
+    gw=$(ip route | awk '/^default/ {print $3; exit}')
+    [[ -z $gw ]] && gw="unavailable"
+    read -rp "$(info "Enter Network IP or press [ENTER] for gateway ($gw): ")" input
     if [[ -z $input ]]; then
-        SNET="$SUNET"
+        SNET="$gw"
     else
         SNET="$input"
     fi
     info "Target set to: $SNET"
     read -rp "$(printf "${MAGENTA}Press Enter to continue...${NC}")"
 }
+#ip route | awk '/^default/ {print $3; exit}' pulls the gateway IP from the default route line (3rd field is the via address). exit after first match avoids issues if there are multiple default routes (e.g. wlan0 + eth0).
 
 spoof () {
 	
@@ -853,11 +860,11 @@ nmap_menu () {
 				read -p "Press [Enter] to continue..."
 				return 0
 				fi
-            
-            read -rp "$(info "Enter the Network IP or Leave Blank")" SUBNET
-               [[ -z $SUBNET ]] && SUBNET=$(ip route | grep -v default | grep "$INTER" | awk '{print $1}')
-               other
-               [[ $GOTO_MAIN -eq 1 ]] && { GOTO_MAIN=0; break; } ;; #After nmap_main (which called network) returns — check the flag. If it's 1, reset it to 0 and break out of nmap_menu loop. Control returns to main menu.
+
+			read -rp "$(info "Enter Target IP or Leave Blank for Gateway")" SUBNET
+			[[ -z $SUBNET ]] && SUBNET=$(ip route | awk '/^default/ {print $3; exit}')
+			other
+			[[ $GOTO_MAIN -eq 1 ]] && { GOTO_MAIN=0; break; } ;; #After nmap_main (which called network) returns — check the flag. If it's 1, reset it to 0 and break out of nmap_menu loop. Control returns to main menu.
             
 		
 		0) info "Bye Bye"
@@ -1143,10 +1150,12 @@ meta_menu () {
 
 crack () {
 	
-		warn "Removing any precious caches"
+		warn "Removing any previous caches"
 		read -rp "$(printf "${RED}${BOLD} Press [ENTER] to continue${NC}")"
 	    rm -f "/home/$(logname)/hash.txt"
 		rm -f "/home/$(logname)/.john/john.pot"
+		rm -f "$HASHFILE"
+		rm -f "$HCFILE"
 		info "SUPPORTED FILE::: ZIP, RAR, PDF, 7Z, CAP, OFFICE (doc/docx/xls/xlsx/ppt/pptx), KDBX (keepass)"
 		file_selection || return 1
 		file_extension || return 1
@@ -1189,7 +1198,7 @@ file_selection () {
 
 file_extension () {
 	
-	info "Choose a file Extension...."
+	info "Choose the file Extension...."
 	
 	while true; do
 		prin "1)ZIP"
@@ -1201,9 +1210,9 @@ file_extension () {
 		prin "7)OFFICE"
 		prin "0)Select File Again"		
 	
-	read -p ">>" extension
+	read -p ">>" extvaibhav
 	
-	case $extension in 
+	case $extvaibhav in 
 		1) zip_run; return 0;;
 		2) rar_run; return 0;;
 		3) pdf_run; return 0;;
@@ -1214,121 +1223,209 @@ file_extension () {
 		0) return 0 ;;
 		*) err "Choose Correct Number (1-6)"
 			read -p "Press [Enter] to continue"
-			;;
+			continue	;;
 	esac
 	done
 }
 
-zip_run () {
-	
-	
-	read -p "Press [Enter] to begin cracking"
-	
-	info "Extracting HASH From $file"
-	zip2john $file > hash.txt  #zip2john — reads the ZIP file's encryption header ;;;myfile.zip — your target file ;;; > hash.txt — saves the extracted hash to a file
-	
-	read -p "Press [Enter] to begin cracking"
-	
-	john --wordlist=op.txt hash.txt
-	
-	john --show hash.txt
-	
-    read -p "Press [Enter] to return to menu"
-    return 0
-    
+
+extract_hash () {
+	local tool=$1
+	"$tool" "$file" > "$HASHFILE"
+	grep -oP '\$\w+\$.*?\$/\w+\$' "$HASHFILE" > "$HCFILE"
 }
 
+
+zip_run () {
+	
+	info "Extracting HASH From $file"
+	extract_hash zip2john  #zip2john — reads the ZIP file's encryption header ;;;myfile.zip — your target file ;;; > hash.txt — saves the extracted hash to a file
+	
+	    # Guard against empty hash
+    if [ ! -s "$HASHFILE" ]; then
+        err "Empty hash file provided"
+        return 1
+    fi
+    
+    ext=13600
+    
+    read -p "press [ENTER] to continue"
+    return 0
+}
 rar_run () {
 		
 		info "Extracting HASH From $file"
-		rar2john $file > hash.txt
-	
-		read -p "Press [Enter] to begin cracking"
-		john --wordlist=op.txt hash.txt
-	
-		john --show hash.txt
-	
-		read -p "Press [Enter] to return to menu"
+		extract_hash rar2john
+		
+		# Guard against empty hash
+		if [ ! -s "$HASHFILE" ]; then
+			err "Empty hash file provided"
+			return 1
+		fi
+		
+		ext=13000
+		
+		read -p "press [ENTER] to continue"
 		return 0
-	
 }
 	
 pdf_run () {
 		
 		info "Extracting HASH From $file"
-		pdf2john $file > hash.txt
-	
-		read -p "Press [Enter] to begin cracking"
-		john --wordlist=op.txt hash.txt
+		extract_hash pdf2john
 		
-		john --show hash.txt
-	
-		read -p "Press [Enter] to return to menu"
+		    # Guard against empty hash
+		if [ ! -s "$HASHFILE" ]; then
+			err "Empty hash file provided"
+			return 1
+		fi
+		
+		ext=10500
+		
+		read -p "press [ENTER] to continue"
 		return 0
-	
 }
-
 sevenzip_run () { #Note: function name 7zip_run starting with a digit is invalid in bash — function names can't start with a number.
 		
 		info "Extracting HASH From $file"
-		7z2john $file > hash.txt
-	
-		read -p "Press [Enter] to begin cracking"
-		john --wordlist=op.txt hash.txt
-	
-		john --show hash.txt
-	
-		read -p "Press [Enter] to return to menu"
-		return 0
-	
+		extract_hash 7z2john
+		
+		    # Guard against empty hash
+    if [ ! -s "$HASHFILE" ]; then
+        err "Empty hash file provided"
+        return 1
+    fi
+    
+    ext=11600
+    
+    read -p "press [ENTER] to continue"
+    return 0
 }
-
 cap_run () {
 		
 		info "Extracting HASH From $file"
-		hcxpcapngtool -o handshake.hc22000 $file
+		hcxpcapngtool -o "$HCFILE" "$file"
 		
-		read -rp "$(printf "${DIM} Wordlist Name${NC}\t")" full
-		read -p "Press [Enter] to begin cracking"
-		hashcat -m 22000 handshake.hc22000 /home/$(logname)/$full
+		ext=22000
 		
-		#sudo -E hashcat -m 22000 handshake.hc22000 one.txt --force  #without sudo -E (lost the RUSTICL_ENABLE env var)
-		hashcat -m 22000 -D 1,2 -a 0 handshake.hc22000 test.txt -O -w 3 --force
-		
-		read -p "Press [Enter]"
+		read -p "press [ENTER] to continue"
 		return 0
 }
-
 keepass_run () {
 		
 		info "Extracting HASH From $file"
-		keepass2john $file > hash.txt
+		extract_hash keepass2john
 	
-		read -p "Press [Enter] to begin cracking"
-		john --wordlist=op.txt hash.txt
-	
-		john --show hash.txt
-	
-		read -p "Press [Enter] to return to menu"
-		return 0
-	
+		    # Guard against empty hash
+    if [ ! -s "$HASHFILE" ]; then
+        err "Empty hash file provided"
+        return 1
+    fi
+    
+    ext=13400
+    
+    read -p "press [ENTER] to continue"
+    return 0
 }
-
 office_run () {
 		
 		info "Extracting HASH From $file"
-		office2john $file > hash.txt
-	
-		read -p "Press [Enter] to begin cracking"
-		john --wordlist=op.txt hash.txt
-	
-		john --show hash.txt
-	
-		read -p "Press [Enter] to return to menu"
-		return 0
-	
+		extract_hash office2john
+		
+		    # Guard against empty hash
+    if [ ! -s "$HASHFILE" ]; then
+        err "Empty hash file provided"
+        return 1
+    fi
+    
+    ext=9600
+    
+    read -p "press [ENTER] to continue"
+    return 0
 }
 
+hashcat_run () {
+	
+	read -rp "$(printf "${DIM}Wordlist Name${NC}\t")" wordlist
+	
+	if [ -z "$wordlist" ]; then
+		err "Choose the Wordlist"
+		return 1
+	fi
+	
+	read -p "Press [Enter] to begin cracking"
+	
+	
+	hashcat -d 1 -D 1 -a 0 -m "$ext" "$HCFILE" "/home/$(logname)/$wordlist" -w 3 -O --force
+	
+	hashcat -m "$ext" "$HCFILE" --show
+
+	read -p "Press [Enter] to Continue"
+}
+
+john_run () {
+	
+	if [[ ! $file =~ \.(zip|rar|pdf|7z|doc|docx|xls|ppt|pptx|kdbx)$ ]]; then
+		err "Invalid file — expected a different file format"
+		
+		read -p "Press [Enter] to Continue"
+		return 1
+	fi
+	
+	read -rp "$(printf "${DIM}Wordlist Name${NC}\t")" wordlist
+	
+	if [ -z "$wordlist" ]; then
+		err "Choose the Wordlist"
+		return 1
+	fi
+
+	john --wordlist="/home/$(logname)/$wordlist" "$HASHFILE"
+	
+	read -p "Press [Enter] to Continue"
+}
+
+aircrack_run () {
+	
+	read -rp "$(printf "${DIM}Wordlist Name${NC}\t")" wordlist
+	
+	if [ -z "$wordlist" ]; then
+		err "Choose the Wordlist"
+		
+		read -p "Press [Enter] to Continue"
+		return 1
+	fi
+	
+		if [[ ! $file =~ \.(cap|pcap|pcapng)$ ]]; then
+			err "Invalid extension — expected .cap/.pcap/.pcapng"
+			
+			read -p "Press [Enter] to Continue"
+			return 1
+		fi
+	
+		read -rp "$(warn "Enter AP of Handshake")" ap
+		
+	aircrack-ng -w "/home/$(logname)/$wordlist" -b "$ap" "$file"	
+	
+	read -p "Press [ENTER] to Continue"
+}	
+
+way_crack () {
+	
+	into "1) By Hashcat"
+	into "2) By John"
+	into "3) By Aircrack"
+	
+	read -p ">>  " choice
+	
+	case $choice in 
+	
+	1) hashcat_run;;
+	2) john_run;;
+	3)aircrack_run;;
+	*) warn "Wrong Choice"; return 1;;
+	
+	esac
+	}
 # ══════════════════════════════════════════════════════════════════════════════
 # 		HASHCAT MENU Logic
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1344,10 +1441,10 @@ crack_menu () {
         printf "${MAGENTA}3.Clear Temporary File${NC}\n"
         printf "${RED}0.Main Menu${NC}\n"
 
-        read -rp "$(printf "${GREEN}Make Choice =>${NC}")" read
+        read -rp "$(printf "${GREEN}Make Choice =>${NC}")" reading
 
-        case $read in 
-            1)crack;;
+        case $reading in 
+            1)crack && way_crack;;  #useed && means if crack is runned successfully only then run way_crack
             2)generate;;
             3)delete;;
             0) return 0 ;;
@@ -1379,7 +1476,8 @@ while true; do
 		
 		case $choice in 
 			
-			1)wifi_menu;;
+			1) select_interface
+				wifi_menu;;
 			
 			2)bettercap_menu;;
 			
