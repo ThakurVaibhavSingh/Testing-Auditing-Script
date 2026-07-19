@@ -48,13 +48,6 @@ DIM='\033[2m'
 DIMMER='\033[2;90m'
 NC='\033[0m'
 
-#ROOT CHECK
-if [[ $EUID -ne 0 ]]; then
-    err "Run as root: sudo ./airattack.sh"
-    exit 1
-fi
-
-
 GOTO_MAIN=0 #GOTO_MAIN=0 — global flag, starts as 0 (false).
 INTERFA="wlan1"
 ap="" #to announce it globally 
@@ -71,6 +64,13 @@ pt () { printf "${DIMMER}${YELLOW}${DIM} $1 ${NC}\n";}
 into () { printf "${BOLD}${MAGENTA} $1${NC}\n";}	
 to () { printf "${BOLD}${GREEN} $1${NC}\n";}
 out () { printf "${BOLD}${RED} $1${NC}\n";}
+
+#ROOT CHECK
+if [[ $EUID -ne 0 ]]; then
+    err "Run as root: sudo ./airattack.sh"
+    exit 1
+fi
+
 
 HASHFILE="/home/$(logname)/hash.txt"
 HCFILE="/home/$(logname)/hashcat_hash.txt"
