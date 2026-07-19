@@ -30,7 +30,7 @@ generate () {
 		read -rp "$(printf "${ORANGE} File Name Without Extension >> ${NC}\t")" fill
 		read -p "press [ENTER] to continue"
 		
-		crunch $min $max $char -o $fill.txt
+		crunch "$min" "$max" "$char" -o "/home/$(logname)/$fill.txt"
 		
 		info "File Generated"
 		read -p "press [ENTER] to continue"
