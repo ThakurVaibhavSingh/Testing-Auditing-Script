@@ -1,13 +1,5 @@
 #!/bin/bash
 
-
-#ROOT CHECK
-if [[ $EUID -ne 0 ]]; then
-    err "Run as root: sudo ./airattack.sh"
-    exit 1
-fi
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # CONGIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
@@ -55,6 +47,12 @@ BOLD='\033[1m'
 DIM='\033[2m'
 DIMMER='\033[2;90m'
 NC='\033[0m'
+
+#ROOT CHECK
+if [[ $EUID -ne 0 ]]; then
+    err "Run as root: sudo ./airattack.sh"
+    exit 1
+fi
 
 
 GOTO_MAIN=0 #GOTO_MAIN=0 — global flag, starts as 0 (false).
