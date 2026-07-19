@@ -492,7 +492,7 @@ hashcat_run () {
 
 john_run () {
 	
-	if [[ ! $file =~ \.(zip|rar|pdf|7z|doc|docx|xls|ppt|pptx|kdbx)$ ]]; then
+	if [[ ! $file =~ \.(zip|rar|pdf|7z|doc|docx|xls|xlsx|ppt|pptx|kdbx)$ ]]; then
 		err "Invalid file — expected a different file format"	
 		read -p "Press [Enter] to Continue"
 		return 1
