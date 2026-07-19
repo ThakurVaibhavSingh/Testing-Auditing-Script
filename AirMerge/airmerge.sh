@@ -10,7 +10,7 @@ source "$SCRIPT_DIR/Modules/wifi.sh"
 source "$SCRIPT_DIR/Modules/bettercap.sh"
 source "$SCRIPT_DIR/Modules/crack.sh"
 source "$SCRIPT_DIR/Modules/nmap.sh"
-source "$SCRIPT_DIR/Modules/metaspliot.sh"
+source "$SCRIPT_DIR/Modules/metasploit.sh"
 
 # ...then your main() / workflow() menu function, which calls
 # crack_menu, wifi_menu, bettercap_menu etc. — those functions
